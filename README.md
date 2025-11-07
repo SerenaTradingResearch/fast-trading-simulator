@@ -16,7 +16,7 @@
 pip install fast-trading-simulator
 ```
 
-- [Simulation data with pre-computed `position` (2025-07-01 to 2025-08-01)](https://raw.githubusercontent.com/SerenaTradingResearch/fast-trading-simulator/refs/heads/main/test/sim_data_2025-07-01_2025-08-01.pkl)
+- [Simulation data (2025-07-01 to 2025-08-01)](https://raw.githubusercontent.com/SerenaTradingResearch/fast-trading-simulator/refs/heads/main/test/futures_sim_data_2025-07-01_2025-08-01.pkl)
 
 ```py
 from typing import Dict
@@ -27,7 +27,7 @@ from trading_models.utils import plot_general
 
 from fast_trading_simulator.simulate import simulate
 
-data: Dict = load_pkl("sim_data_2025-07-01_2025-08-01.pkl", gz=True)
+data: Dict = load_pkl("futures_sim_data_2025-07-01_2025-08-01.pkl", gz=True)
 sim_data: Dict[str, Dict[str, np.ndarray]] = data["sim_data"]
 # for sym, x in sim_data.items():
 #     x["position"] = custom_strategy(x["close"])
@@ -51,7 +51,7 @@ data["sim_data"] = arr
 trades = np.array(simulate(**data, init_cash=10e3, alloc_ratio=0.005))
 plots = {
     f"worth ({len(trades)} trades)": trades[:, -1],
-    "cash_hist": trades[:, -4],
+    "position_hist": trades[:, 2],
     "duration_hist": trades[:, -3],
     "profit_hist": trades[:, -2],
 }
@@ -63,7 +63,7 @@ plot_general(plots, "simulate")
 
 ```bash
 data keys: ['sim_data', 'timeout', 'take_profit', 'stop_loss', 'fee']
-arr.shape: (8417, 401, 3) (time, symbols, fields)
-401 symbols: ['BTCUSDT', 'ETHUSDT', 'BNBUSDT']...
+arr.shape: (8417, 482, 3) (time, symbols, fields)
+482 symbols: ['BTCUSDT', 'ETHUSDT', 'BCHUSDT']...
 3 fields: ['open_time', 'close', 'position']
 ```
