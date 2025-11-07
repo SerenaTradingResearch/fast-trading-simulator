@@ -1,103 +1,69 @@
 
 ## Intro
 
-- Neural Network models for trading: MLP, CNN, Transformer
-- Below shows the training process of my private model
+- `Numba` accelerated `minimalist` trading simulator
+- In `28 lines`:
+  - Multi-symbol
+  - Multi-position, long & short, continuous from -1 to 1
+  - Timeout, take-profit, stop-loss, trading fee
+  - Initial cash, minimum cash, **allocation ratio (risk control)**
 
-![](https://raw.githubusercontent.com/SerenaTradingResearch/trading-models/main/test/train_model.gif)
+![](https://raw.githubusercontent.com/SerenaTradingResearch/fast-trading-simulator/refs/heads/main/test/simulate.png)
 
 ## Usage
 
 ```bash
-pip install trading-models
+pip install fast-trading-simulator
 ```
 
+- [Simulation data with pre-computed `position` (2025-07-01 to 2025-08-01)](https://raw.githubusercontent.com/SerenaTradingResearch/fast-trading-simulator/refs/heads/main/test/sim_data_2025-07-01_2025-08-01.pkl)
+
 ```py
-import torch as tc
-from torch.utils.data import DataLoader
+from typing import Dict
 
-from trading_models.simple_models import CNN, MLP, Transformer
-from trading_models.utils import WindowDataset, model_size
+import numpy as np
+from crypto_data_downloader.utils import load_pkl
+from trading_models.utils import plot_general
 
+from fast_trading_simulator.simulate import simulate
+
+data: Dict = load_pkl("sim_data_2025-07-01_2025-08-01.pkl", gz=True)
+sim_data: Dict[str, Dict[str, np.ndarray]] = data["sim_data"]
+# for sym, x in sim_data.items():
+#     x["position"] = custom_strategy(x["close"])
+symbols = list(sim_data.keys())
+fields = list(sim_data["BTCUSDT"].keys())
+arr = np.array([list(x.values()) for x in sim_data.values()])
+arr = arr.transpose((2, 0, 1))
+
+print(f"data keys: {list(data.keys())}")
+print(f"arr.shape: {arr.shape} (time, symbols, fields)")
+print(f"{len(symbols)} symbols: {symbols[:3]}...")
+print(f"{len(fields)} fields: {fields}")
 """
-trading models
-
-input: x.shape = (T, F)
-output: a.shape = (T-W+1, A)
-
-T: time
-F: features
-W: window length
-A: actions
-
-at each time step t in range(W-1, T),
-the model looks at data in the window
-x[t+1-W : t+1, :]
-to make A actions
+timeout: int, number of time steps
+take_profit: float, e.g. 0.01 (1%)
+stop_loss: float, e.g. -0.3 (-30%)
+fee: float, buy+sell total, e.g. 7e-4 (0.07%)
 """
 
-T, F, W, A = 100, 2, 50, 1
-device = tc.device("cuda" if tc.cuda.is_available() else "cpu")
-x = tc.randn(T, F).to(device)
-
-dataset = WindowDataset(x, W)
-dataloader = DataLoader(dataset, batch_size=32, shuffle=False)
-
-net1 = MLP([W * F, 64, 64, A]).to(device)
-net2 = CNN([F, 64, 64, A]).to(device)
-net3 = Transformer(W, F, A, d_model=64, d_ff=64, n_head=2, n_layer=2).to(device)
-
-for net in [net1, net2, net3]:
-    outputs = []
-    for batch in dataloader:
-        outputs.append(net(batch.to(device)).detach())
-    output = tc.cat(outputs, dim=0)
-    print(net, output.shape, model_size(net), "\n")
+data["sim_data"] = arr
+trades = np.array(simulate(**data, init_cash=10e3, alloc_ratio=0.005))
+plots = {
+    f"worth ({len(trades)} trades)": trades[:, -1],
+    "cash_hist": trades[:, -4],
+    "duration_hist": trades[:, -3],
+    "profit_hist": trades[:, -2],
+}
+plot_general(plots, "simulate")
 
 ```
 
 - Output
 
 ```bash
-MLP(
-  (mlp): Sequential(
-    (0): Linear(in_features=100, out_features=64, bias=True)
-    (1): SiLU()
-    (2): Linear(in_features=64, out_features=64, bias=True)
-    (3): SiLU()
-    (4): Linear(in_features=64, out_features=1, bias=True)
-  )
-) torch.Size([51, 1]) trainable: 10689/10689 
-
-CNN(
-  (cnn): Sequential(
-    (0): Conv1d(2, 64, kernel_size=(3,), stride=(1,), padding=(1,))
-    (1): SiLU()
-    (2): Conv1d(64, 64, kernel_size=(3,), stride=(1,), padding=(1,))
-    (3): SiLU()
-    (4): AdaptiveAvgPool1d(output_size=1)
-  )
-  (fc): Linear(in_features=64, out_features=1, bias=True)
-) torch.Size([51, 1]) trainable: 12865/12865 
-
-Transformer(
-  (proj): Linear(in_features=2, out_features=64, bias=True)
-  (trans): TransformerEncoder(
-    (layers): ModuleList(
-      (0-1): 2 x TransformerEncoderLayer(
-        (self_attn): MultiheadAttention(
-          (out_proj): NonDynamicallyQuantizableLinear(in_features=64, out_features=64, bias=True)
-        )
-        (linear1): Linear(in_features=64, out_features=64, bias=True)
-        (dropout): Dropout(p=0.1, inplace=False)
-        (linear2): Linear(in_features=64, out_features=64, bias=True)
-        (norm1): LayerNorm((64,), eps=1e-05, elementwise_affine=True)
-        (norm2): LayerNorm((64,), eps=1e-05, elementwise_affine=True)
-        (dropout1): Dropout(p=0.1, inplace=False)
-        (dropout2): Dropout(p=0.1, inplace=False)
-      )
-    )
-  )
-  (fc): Linear(in_features=64, out_features=1, bias=True)
-) torch.Size([51, 1]) trainable: 50689/50689 
+data keys: ['sim_data', 'timeout', 'take_profit', 'stop_loss', 'fee']
+arr.shape: (8417, 401, 3) (time, symbols, fields)
+401 symbols: ['BTCUSDT', 'ETHUSDT', 'BNBUSDT']...
+3 fields: ['open_time', 'close', 'position']
 ```
