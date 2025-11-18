@@ -27,6 +27,7 @@ fee: float, buy+sell total, e.g. 7e-4 (0.07%)
 """
 
 data["sim_data"] = arr
+data.pop("timeout_min", None)
 trades = np.array(simulate(**data, init_cash=10e3, alloc_ratio=0.005))
 plots = {
     f"worth ({len(trades)} trades)": trades[:, -1],
