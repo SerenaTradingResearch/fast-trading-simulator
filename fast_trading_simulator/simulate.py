@@ -12,8 +12,10 @@ def simulate(
     init_cash=10e3,
     min_cash=10,
     alloc_ratio=0.01,
+    use_ratio=0.2,
     min_pos=0.5,
 ):
+    max_open = int(use_ratio / alloc_ratio)
     worth = cash_left = init_cash
     open_trades = {}
     done_trades = []
@@ -29,6 +31,7 @@ def simulate(
             dt = t - t1
             pr = np.sign(pos1) * (price2 / price1 - 1) - fee
             if dt >= timeout or pr >= take_profit or pr <= stop_loss:
+                pr = min(pr, take_profit)
                 cash_left += cash1 * (1 + pr)
                 worth += cash1 * pr
                 del open_trades[id]
@@ -37,7 +40,7 @@ def simulate(
 
         for s in range(SYMBOL):
             time, price, pos = sim_data[t, s]
-            if abs(pos) >= min_pos:
+            if abs(pos) >= min_pos and len(open_trades) < max_open:
                 cash = int(min(cash_left, worth * alloc_ratio * abs(pos)))
                 id = int((s + 1) * np.sign(pos))
                 if cash >= min_cash and id not in open_trades:

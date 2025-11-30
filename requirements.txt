@@ -1,2 +1,4 @@
 numba
 numpy
+pymoo
+trading_models
