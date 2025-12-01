@@ -21,7 +21,6 @@ def simulate(
     done_trades = []
 
     TIME, SYMBOL, FIELD = sim_data.shape
-    sim_data[:, :, 2] = np.round(sim_data[:, :, 2], 2)
 
     for t in range(TIME):
 
