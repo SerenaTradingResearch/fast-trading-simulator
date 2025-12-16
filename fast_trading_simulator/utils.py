@@ -1,10 +1,34 @@
 from typing import Callable, Dict
 
+import matplotlib.pyplot as plt
 import numpy as np
+from crypto_data_downloader.utils import load_pkl
 from pymoo.algorithms.soo.nonconvex.ga import GA
 from pymoo.core.problem import ElementwiseProblem
 from pymoo.optimize import minimize
 from trading_models.utils import plot_general
+
+
+def volatility(price: np.ndarray):
+    dp = np.diff(price) / price[:-1]
+    return np.sqrt(np.mean(dp**2))
+
+
+def load_market(path, vol_range=[1e-3, 2e-2], ref_sym="BTCUSDT", price_idx=1):
+    data: Dict[str, np.ndarray] = load_pkl(path, gz=True)
+    T = len(data[ref_sym])
+    market, vols = [], []
+    for v in data.values():
+        vol = volatility(v[:, price_idx])
+        if len(v) == T and vol > vol_range[0] and vol < vol_range[1]:
+            market.append(v)
+            vols.append(vol)
+    plt.hist(vols, bins=100)
+    plt.savefig("volatility_hist.png")
+    return np.array(market)
+
+
+# ======================================
 
 
 def round_dx(x, dx):
