@@ -10,6 +10,16 @@ from pymoo.optimize import minimize
 from trading_models.utils import D2_TYPE, D_TYPE, plot_general
 
 
+class ActMap:
+    @staticmethod
+    def from_tanh(tanh, low, high):
+        return (tanh + 1) / 2 * (high - low) + low
+
+    @staticmethod
+    def to_tanh(x, low, high):
+        return (x - low) / (high - low) * 2 - 1
+
+
 def volatility(price: np.ndarray):
     dp = np.diff(price) / price[:-1]
     return np.sqrt(np.mean(dp**2))
