@@ -1,5 +1,6 @@
 numba
 numpy
+TA-Lib
 matplotlib
 pymoo
 trading_models

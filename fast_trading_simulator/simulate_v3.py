@@ -12,6 +12,7 @@ class SimModes(Enum):
 
 def simulate(
     mode: SimModes,
+    obs: np.ndarray,
     market: np.ndarray,
     action: np.ndarray,
     tot_fee=1e-3,
@@ -22,7 +23,7 @@ def simulate(
     min_cash=10,
     price_idx=1,
     clip_pr=False,
-):
+) -> Dict[str, np.ndarray]:
     if mode == SimModes.ALL_POINTS:
         res = simulate_all_points(
             market,
@@ -47,7 +48,10 @@ def simulate(
         )
         res = np.array(trades)
         keys = ["sym", "time", "cash", "duration", "profit", "worth"]
-    return {k: res[..., i] for i, k in enumerate(keys)}
+        sym, time = res[:, :2].T.astype(int)
+        obs, action = obs[sym, time], action[sym, time]
+    res = {k: res[..., i] for i, k in enumerate(keys)}
+    return {**res, "obs": obs, "action": action}
 
 
 @numba.njit

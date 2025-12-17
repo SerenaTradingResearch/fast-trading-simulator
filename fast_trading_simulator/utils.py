@@ -2,11 +2,12 @@ from typing import Callable, Dict
 
 import matplotlib.pyplot as plt
 import numpy as np
+import talib as ta
 from crypto_data_downloader.utils import load_pkl
 from pymoo.algorithms.soo.nonconvex.ga import GA
 from pymoo.core.problem import ElementwiseProblem
 from pymoo.optimize import minimize
-from trading_models.utils import plot_general
+from trading_models.utils import D2_TYPE, D_TYPE, plot_general
 
 
 def volatility(price: np.ndarray):
@@ -14,18 +15,37 @@ def volatility(price: np.ndarray):
     return np.sqrt(np.mean(dp**2))
 
 
-def load_market(path, vol_range=[1e-3, 2e-2], ref_sym="BTCUSDT", price_idx=1):
-    data: Dict[str, np.ndarray] = load_pkl(path, gz=True)
+def make_market_n_obs(
+    path,
+    vol_range=[1e-3, 2e-2],
+    ref_sym="BTCUSDT",
+    price_idx=1,
+    # obs:
+    MA=ta.KAMA,
+    periods=[10, 100],
+    add_ref_obs=True,
+):
+    data: D_TYPE = load_pkl(path, gz=True)
     T = len(data[ref_sym])
-    market, vols = [], []
-    for v in data.values():
-        vol = volatility(v[:, price_idx])
-        if len(v) == T and vol > vol_range[0] and vol < vol_range[1]:
-            market.append(v)
-            vols.append(vol)
-    plt.hist(vols, bins=100)
-    plt.savefig("volatility_hist.png")
-    return np.array(market)
+    temp: D2_TYPE = {}
+    skip = max(periods)
+    for sym, v in data.items():
+        if len(v) != T:
+            continue
+        p = v[:, price_idx]
+        obs = np.array([p / MA(p, P) - 1 for P in periods]).T
+        obs = obs.clip(-1, 1)
+        vol = volatility(p)
+        ok = vol > vol_range[0] and vol < vol_range[1]
+        temp[sym] = {"raw": v[skip:], "obs": obs[skip:], "ok": ok, "vol": vol}
+    if add_ref_obs:
+        ref_obs = temp[ref_sym]["obs"]
+        for sym, d in temp.items():
+            d["obs"] = np.concat([d["obs"], ref_obs], axis=1)
+    get = lambda key: np.array([d[key] for d in temp.values() if d["ok"]])
+    plt.hist(get("vol"), bins=100)
+    plt.savefig("volatility_hist")
+    return get("raw"), get("obs")
 
 
 # ======================================
