@@ -25,14 +25,14 @@ def simulate(
     clip_pr=False,
 ) -> Dict[str, np.ndarray]:
     if mode == SimModes.ALL_POINTS:
-        res = simulate_all_points(
+        trades = simulate_all_points(
             market,
             action,
             tot_fee,
+            min_pos,
             price_idx,
             clip_pr,
         )
-        keys = ["duration", "profit"]
     if mode == SimModes.PORTFOLIO:
         trades = simulate_portfolio(
             market,
@@ -46,10 +46,10 @@ def simulate(
             price_idx,
             clip_pr,
         )
-        res = np.array(trades)
-        keys = ["sym", "time", "cash", "duration", "profit", "worth"]
-        sym, time = res[:, :2].T.astype(int)
-        obs, action = obs[sym, time], action[sym, time]
+    res = np.array(trades)
+    keys = ["sym", "time", "cash", "duration", "profit", "worth"]
+    sym, time = res[:, :2].T.astype(int)
+    obs, action = obs[sym, time], action[sym, time]
     res = {k: res[..., i] for i, k in enumerate(keys)}
     return {**res, "obs": obs, "action": action}
 
@@ -76,24 +76,27 @@ def simulate_all_points(
     market: np.ndarray,
     action: np.ndarray,
     tot_fee=1e-3,
+    min_pos=0.1,
     price_idx=1,
     clip_pr=False,
 ):
     SYMBOL, TIME, _ = market.shape
-    result = np.zeros((SYMBOL, TIME, 2))
+    done_trades = []
 
     for s1 in numba.prange(SYMBOL):
         for t1 in numba.prange(TIME - 1):
-            for t in range(t1 + 1, TIME):
-                dt = t - t1
+            pos = action[s1, t1, 0]
+            if abs(pos) >= min_pos:
                 price1 = market[s1, t1, price_idx]
-                price2 = market[s1, t, price_idx]
                 act = action[s1, t1]
-                pr, exit = find_profit(price1, price2, dt, act, tot_fee, clip_pr)
-                if exit:
-                    result[s1, t1] = float(dt), pr
-                    break
-    return result
+                for t in range(t1 + 1, TIME):
+                    dt = t - t1
+                    price2 = market[s1, t, price_idx]
+                    pr, exit = find_profit(price1, price2, dt, act, tot_fee, clip_pr)
+                    if exit:
+                        done_trades.append([s1, t1, 1.0, float(dt), pr, 0.0])
+                        break
+    return done_trades
 
 
 @numba.njit
