@@ -63,12 +63,13 @@ def find_profit(
     tot_fee: float,
     clip=False,
 ):
-    pos, timeout, take_profit, stop_loss = action
-    pr = np.sign(pos) * (price2 / price1 - 1) - tot_fee
+    pos, lev, timeout, take_profit, stop_loss = action
+    lev = max(1, int(lev))
+    pr = lev * (np.sign(pos) * (price2 / price1 - 1) - tot_fee)
     exit = dt >= timeout or pr >= take_profit or pr <= stop_loss
     if clip:
         pr = min(pr, take_profit)
-    return pr, exit
+    return max(-1, pr), exit
 
 
 @numba.njit
