@@ -5,7 +5,7 @@ with open("README.md", encoding="utf-8") as f:
 
 setup(
     name="fast-trading-simulator",
-    version="0.1.0",
+    version="0.1.1",
     author="Ricky Ding",
     author_email="e0134117@u.nus.edu",
     description="Numba accelerated minimalist trading simulator",

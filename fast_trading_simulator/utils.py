@@ -7,7 +7,7 @@ from crypto_data_downloader.utils import load_pkl
 from pymoo.algorithms.soo.nonconvex.ga import GA
 from pymoo.core.problem import ElementwiseProblem
 from pymoo.optimize import minimize
-from trading_models.utils import D2_TYPE, D_TYPE, plot_general
+from trading_models.utils import D2_TYPE, D_TYPE
 
 
 class ActMap:
@@ -86,14 +86,3 @@ def pymoo_minimize(func: Callable, conf: Dict, algo=GA()):
             out["F"] = loss
 
     minimize(Prob(), algo, seed=42)
-
-
-def plot_trades(trades):
-    trades = np.array(trades)
-    plots = {
-        f"worth ({len(trades)} trades)": trades[:, -1],
-        "position_hist": trades[:, 2],
-        "duration_hist": trades[:, -3],
-        "profit_hist": trades[:, -2],
-    }
-    plot_general(plots, "simulate")

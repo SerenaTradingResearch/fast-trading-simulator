@@ -1,19 +1,3 @@
-
-## Intro
-
-- `Numba` accelerated `minimalist` trading simulator
-
-![](https://raw.githubusercontent.com/SerenaTradingResearch/fast-trading-simulator/refs/heads/main/test/simulate.png)
-
-## Usage
-
-```bash
-pip install fast-trading-simulator
-```
-
-- [Simulation data (2025-08-01 to 2025-11-20)](https://raw.githubusercontent.com/SerenaTradingResearch/fast-trading-simulator/refs/heads/main/test/futures_data_2025-08-01_2025-11-20.pkl)
-
-```py
 import numpy as np
 import talib as ta
 from crypto_data_downloader.utils import load_pkl
@@ -49,5 +33,3 @@ liq_fee = np.full(len(data), 0.02)
 
 trades = simulate(market, action, tot_fee, liq_fee, use_ratio=0.2, alloc_ratio=0.01)
 map_trades(trades, plot=True)
-
-```
