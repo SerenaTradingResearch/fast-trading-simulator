@@ -45,11 +45,23 @@ def find_profit(
         return pr, E_LIQ_PROTECT
     if pr < stop_loss:
         return pr, E_STOP_LOSS
-    if pr > take_profit and dt > 0:
+    if pr > take_profit:
         return pr, E_TAKE_PROFIT
     if dt >= timeout:
         return pr, E_TIMEOUT
     return pr, E_NO_EXIT
+
+
+@numba.njit
+def find_price2(
+    price1: float,
+    action: np.ndarray,
+    tot_fee: float,
+):
+    pos, lev, timeout, take_profit, stop_loss = action
+    pos, lev, p1 = np.sign(pos), max(1, int(lev)), price1
+    # pr = lev * (pos * (p2 - p1) / p1 - tot_fee)
+    return (take_profit / lev + tot_fee) * p1 / pos + p1
 
 
 @numba.njit
@@ -101,7 +113,7 @@ def simulate(
         for s in range(SYMBOL):
             pos = action[s, t, 0]
             if abs(pos) > min_pos and len(open_trades) < max_open:
-                cash = int(min(cash_left, worth * alloc_ratio * abs(pos)))
+                cash = min(cash_left, worth * alloc_ratio * abs(pos))
                 id = int(np.sign(pos) * (s + 1))
                 if cash > min_cash and id not in open_trades:
                     cash_left -= cash
