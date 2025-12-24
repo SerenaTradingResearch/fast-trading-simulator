@@ -135,3 +135,39 @@ def map_trades(trades, to_map=[], plot=True):
         plots[f"log10(worth) ({len(sym)} trades)"] = np.log10(res["worth"])
         plot_general(plots, "simulate")
     return (res, to_map) if to_map else res
+
+
+@numba.njit
+def sim_all_points(
+    market: np.ndarray,
+    action: np.ndarray,
+    tot_fee: float,
+    liq_fee: np.ndarray,
+    liq_protect=-0.8,
+    liq_trigger=-0.9,
+    clip_pr: bool = False,
+    price_idx=1,
+):
+    SYMBOL, TIME, _ = market.shape
+    all_pr = np.zeros((SYMBOL, TIME, 1))
+    for s in numba.prange(SYMBOL):
+        for t in numba.prange(TIME):
+            act = action[s, t]
+            if act[0] == 0:
+                continue
+            for t2 in range(t + 1, TIME):
+                pr, exit = find_profit(
+                    price1=market[s, t, price_idx],
+                    price2=market[s, t2, price_idx],
+                    dt=t2 - t,
+                    action=act,
+                    tot_fee=tot_fee,
+                    liq_fee=liq_fee[s],
+                    liq_protect=liq_protect,
+                    liq_trigger=liq_trigger,
+                    clip_pr=clip_pr,
+                )
+                if exit:
+                    all_pr[s, t, 0] = pr
+                    break
+    return all_pr
