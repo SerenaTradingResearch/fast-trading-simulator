@@ -1,13 +1,14 @@
-from typing import Callable, Dict
+from typing import Callable, Dict, List
 
-import matplotlib.pyplot as plt
 import numpy as np
 import talib as ta
 from crypto_data_downloader.utils import load_pkl
 from pymoo.algorithms.soo.nonconvex.ga import GA
 from pymoo.core.problem import ElementwiseProblem
 from pymoo.optimize import minimize
-from trading_models.utils import D2_TYPE, D_TYPE
+from trading_models.utils import D2_TYPE, D_TYPE, plot_general
+
+from fast_trading_simulator.sim import ACT_HIGH, ACT_LOW, ACT_NAMES
 
 
 class ActMap:
@@ -27,7 +28,7 @@ def volatility(price: np.ndarray):
 
 def make_market_n_obs(
     path,
-    vol_range=[1e-3, 2e-2],
+    # vol_range=[1e-3, 2e-2],
     ref_sym="BTCUSDT",
     price_idx=1,
     # obs:
@@ -46,16 +47,36 @@ def make_market_n_obs(
         obs = np.array([p / MA(p, P) - 1 for P in periods]).T
         obs = obs.clip(-1, 1)
         vol = volatility(p)
-        ok = vol > vol_range[0] and vol < vol_range[1]
+        # ok = vol > vol_range[0] and vol < vol_range[1]
+        ok = vol > 0
         temp[sym] = {"raw": v[skip:], "obs": obs[skip:], "ok": ok, "vol": vol}
     if add_ref_obs:
         ref_obs = temp[ref_sym]["obs"]
         for sym, d in temp.items():
             d["obs"] = np.concat([d["obs"], ref_obs], axis=1)
     get = lambda key: np.array([d[key] for d in temp.values() if d["ok"]])
-    plt.hist(get("vol"), bins=100)
-    plt.savefig("volatility_hist")
+    # plt.hist(get("vol"), bins=100)
+    # plt.savefig("volatility_hist")
     return get("raw"), get("obs")
+
+
+def rand_period(arrays: List[np.ndarray], dt=1024):
+    T = arrays[0].shape[1]
+    t1 = np.random.randint(0, T - dt)
+    return [x[:, t1 : t1 + dt] for x in arrays]
+
+
+def rand_action(obs: np.ndarray):
+    SYM, TIME, _ = obs.shape
+    tanh_act = np.random.uniform(-1, 1, (SYM, TIME, 5))
+    tanh_act[:, :, 0] = np.where(tanh_act[:, :, 0] > 0, 1, -1)
+    act = ActMap.from_tanh(tanh_act, ACT_LOW, ACT_HIGH)
+    return tanh_act, act
+
+
+def plot_act_hist(action: np.ndarray):
+    plots = {f"{ACT_NAMES[i]}_hist": action[..., i] for i in range(5)}
+    plot_general(plots, "act_hist")
 
 
 # ======================================

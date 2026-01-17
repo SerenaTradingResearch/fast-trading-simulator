@@ -20,6 +20,10 @@ EXIT_REASONS = [
     "liq_trigger",
 ]
 
+ACT_NAMES = "pos, lev, timeout, take_profit, stop_loss".split(",")
+ACT_LOW = np.array([-1, 1, 1, 0.01, -0.9])
+ACT_HIGH = np.array([1, 10, 100, 0.2, -0.1])
+
 
 @numba.njit
 def find_profit(
@@ -45,7 +49,7 @@ def find_profit(
         return pr, E_LIQ_PROTECT
     if pr < stop_loss:
         return pr, E_STOP_LOSS
-    if pr > take_profit:
+    if pr >= take_profit:
         return pr, E_TAKE_PROFIT
     if dt >= timeout:
         return pr, E_TIMEOUT
@@ -114,7 +118,7 @@ def simulate(
             pos = action[s, t, 0]
             if abs(pos) > min_pos and len(open_trades) < max_open:
                 cash = min(cash_left, worth * alloc_ratio * abs(pos))
-                id = int(np.sign(pos) * (s + 1))
+                id = (np.sign(pos), s)  # int(np.sign(pos) * (s + 1))
                 if cash > min_cash and id not in open_trades:
                     cash_left -= cash
                     open_trades[id] = np.array([s, t, cash, pos, 0.0, 0.0, 0.0, 0.0])
