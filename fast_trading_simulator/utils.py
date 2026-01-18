@@ -1,11 +1,13 @@
 from typing import Callable, Dict, List
 
+import matplotlib.pyplot as plt
 import numpy as np
 import talib as ta
 from crypto_data_downloader.utils import load_pkl
 from pymoo.algorithms.soo.nonconvex.ga import GA
 from pymoo.core.problem import ElementwiseProblem
 from pymoo.optimize import minimize
+from scipy.stats import binned_statistic
 from trading_models.utils import D2_TYPE, D_TYPE, plot_general
 
 from fast_trading_simulator.sim import ACT_HIGH, ACT_LOW, ACT_NAMES
@@ -77,6 +79,28 @@ def rand_action(obs: np.ndarray):
 def plot_act_hist(action: np.ndarray):
     plots = {f"{ACT_NAMES[i]}_hist": action[..., i] for i in range(5)}
     plot_general(plots, "act_hist")
+
+
+def bin_stat(X: np.ndarray, Y: np.ndarray, stat, y_lim=None, bins=100):
+    nx, ny = X.shape[-1], Y.shape[-1]
+    plt.figure(figsize=(4 * ny, 3 * nx))
+    cnt = 0
+    for i in range(nx):
+        for j in range(ny):
+            cnt += 1
+            plt.subplot(nx, ny, cnt)
+            plt.title(f"X{i}, Y{j}")
+            x, y = X[:, i], Y[:, j]
+            y2, edges, _ = binned_statistic(x, y, stat, bins)
+            x2 = (edges[:-1] + edges[1:]) / 2
+            plt.scatter(x, y, s=3, c="y", label="raw")
+            plt.plot(x2, y2, c="b", label="bin_stat")
+            if y_lim is not None:
+                plt.ylim(y_lim)
+            plt.legend()
+    plt.tight_layout()
+    plt.savefig("bin_stat")
+    plt.close()
 
 
 # ======================================
