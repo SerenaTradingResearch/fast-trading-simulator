@@ -72,8 +72,7 @@ def rand_action(obs: np.ndarray):
     SYM, TIME, _ = obs.shape
     tanh_act = np.random.uniform(-1, 1, (SYM, TIME, 5))
     tanh_act[:, :, 0] = np.where(tanh_act[:, :, 0] > 0, 1, -1)
-    act = ActMap.from_tanh(tanh_act, ACT_LOW, ACT_HIGH)
-    return tanh_act, act
+    return ActMap.from_tanh(tanh_act, ACT_LOW, ACT_HIGH)
 
 
 def plot_act_hist(action: np.ndarray):
