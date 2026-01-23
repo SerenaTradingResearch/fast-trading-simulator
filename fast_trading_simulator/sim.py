@@ -137,6 +137,7 @@ def map_trades(trades, to_map=[], plot=True):
     if plot:
         plots = {f"{k}{type}": res[k] for k, type in zip(keys, types)}
         plots[f"log10(worth) ({len(sym)} trades)"] = np.log10(res["worth"])
+        plots["cumsum(profit)"] = np.cumsum(res["profit"])
         plot_general(plots, "simulate")
     return (res, to_map) if to_map else res
 
