@@ -30,7 +30,7 @@ def volatility(price: np.ndarray):
 
 def make_market_n_obs(
     path,
-    # vol_range=[1e-3, 2e-2],
+    vol_range=[0, 1],
     ref_sym="BTCUSDT",
     price_idx=1,
     # obs:
@@ -49,8 +49,7 @@ def make_market_n_obs(
         obs = np.array([p / MA(p, P) - 1 for P in periods]).T
         obs = obs.clip(-1, 1)
         vol = volatility(p)
-        # ok = vol > vol_range[0] and vol < vol_range[1]
-        ok = vol > 0
+        ok = vol > vol_range[0] and vol < vol_range[1]
         temp[sym] = {"raw": v[skip:], "obs": obs[skip:], "ok": ok, "vol": vol}
     if add_ref_obs:
         ref_obs = temp[ref_sym]["obs"]
@@ -66,6 +65,12 @@ def rand_period(arrays: List[np.ndarray], dt=1024):
     T = arrays[0].shape[1]
     t1 = np.random.randint(0, T - dt)
     return [x[:, t1 : t1 + dt] for x in arrays]
+
+
+def slice_period(arrays: List[np.ndarray], r1, r2):
+    T = arrays[0].shape[1]
+    t1, t2 = int(T * r1), int(T * r2)
+    return [x[:, t1:t2] for x in arrays]
 
 
 def rand_action(obs: np.ndarray):
